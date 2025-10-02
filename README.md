@@ -322,8 +322,6 @@ MIT License - Built for DevSoc Hackathon 2025
 **Experience Nexus today and discover how AI-powered matching can revolutionize university collaboration!**
 
 ### Quick Links
-- **🌐 Live Demo**: [nexus-demo.vercel.app](https://nexus-demo.vercel.app)
-- **📱 Mobile Demo**: Scan QR code for mobile experience
 - **🎥 Video Demo**: 4-minute presentation walkthrough
 - **📧 Contact**: team@nexusunsw.com
 
