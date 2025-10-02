@@ -7,11 +7,11 @@ function cx(...classes) {
   return classes.filter(Boolean).join(" ");
 }
 
-const base = "relative overflow-hidden inline-flex items-center justify-center rounded-[8px] font-medium transition-all duration-200 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20 disabled:opacity-60 disabled:pointer-events-none";
+const base = "relative overflow-hidden inline-flex items-center justify-center rounded-[10px] font-medium transition-all duration-300 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20 disabled:opacity-60 disabled:pointer-events-none";
 
 const variants = {
-  primary: "btn-gradient text-white shadow-md hover:shadow-lg",
-  secondary: "border border-white/15 bg-transparent text-white hover:bg-white/5",
+  primary: "btn-gradient text-white shadow-md hover:shadow-lg hover:-translate-y-0.5",
+  secondary: "border border-white/15 bg-transparent text-white hover:bg-white/5 hover:-translate-y-0.5",
   ghost: "bg-transparent text-white hover:bg-white/5",
 };
 

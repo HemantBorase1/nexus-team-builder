@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardHeader, CardContent } from "@/src/components/ui/Card";
 import Input from "@/src/components/ui/Input";
@@ -10,7 +10,8 @@ import Progress from "@/src/components/ui/Progress";
 import Modal from "@/src/components/ui/Modal";
 import Avatar, { AvatarGroup } from "@/src/components/ui/Avatar";
 import Skeleton from "@/src/components/ui/Skeleton";
-import { sampleProjects, users } from "@/src/lib/mock-data";
+import { getAllProjects, getAllUsers } from "@/src/lib/mock-data";
+import staticStorage from "@/src/lib/static-storage";
 
 function Ring({ value = 75, size = 64 }) {
   const radius = (size - 12) / 2;
@@ -32,22 +33,73 @@ function Ring({ value = 75, size = 64 }) {
 }
 
 export default function ProjectsPage() {
+  const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [type, setType] = useState("");
   const [status, setStatus] = useState("");
   const [view, setView] = useState("grid");
   const [open, setOpen] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    type: '',
+    description: '',
+    team_size: 5,
+    timeline: '',
+    required_skills: ''
+  });
 
-  const filtered = useMemo(() => sampleProjects.filter(
-    (p) => p.name.toLowerCase().includes(query.toLowerCase()) && (!type || p.type === type) && (!status || p.status === status)
-  ), [query, type, status]);
+  useEffect(() => {
+    let mounted = true;
+    const seed = getAllProjects();
+    (async () => {
+      const resp = await staticStorage.listProjectsAsync();
+      const user = resp?.data || [];
+      if (mounted) {
+        setProjects([...seed, ...user]);
+        setLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  const filtered = useMemo(() => projects.filter(
+    (p) => (p.title || p.name || '').toLowerCase().includes(query.toLowerCase()) && (!type || p.type === type) && (!status || p.status === status)
+  ), [projects, query, type, status]);
 
   const stats = useMemo(() => ({
-    active: sampleProjects.filter(p=>p.status==='Active').length,
-    planning: sampleProjects.filter(p=>p.status==='Planning').length,
-    completed: sampleProjects.filter(p=>p.status==='Completed').length,
-  }), []);
+    active: projects.filter(p=> (p.status||'').toLowerCase()==='active').length,
+    planning: projects.filter(p=> (p.status||'').toLowerCase()==='planning').length,
+    completed: projects.filter(p=> (p.status||'').toLowerCase()==='completed').length,
+  }), [projects]);
+
+  const handleCreateProject = async () => {
+    if (!formData.name.trim() || !formData.type) return;
+    setCreating(true);
+    const base = {
+      title: formData.name.trim(),
+      description: formData.description.trim(),
+      category: formData.type,
+      type: formData.type,
+      status: 'recruiting',
+      progress: 0,
+      compatibility: 80 + Math.floor(Math.random()*15),
+      owner: 'user-1',
+      deadline: formData.timeline
+    };
+    const optimistic = { id: `temp-${Date.now()}`, ...base };
+    setProjects(prev => [...prev, optimistic]);
+    try {
+      const resp = await staticStorage.createProjectAsync(base);
+      const created = resp.data;
+      setProjects(prev => prev.map(p => p.id===optimistic.id ? created : p));
+      setOpen(false);
+      setFormData({ name: '', type: '', description: '', team_size: 5, timeline: '', required_skills: '' });
+    } finally {
+      setCreating(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -65,7 +117,10 @@ export default function ProjectsPage() {
               ))}
             </div>
           </div>
-          <Button className="btn-gradient btn-glow" onClick={()=>setOpen(true)}>Create New Project</Button>
+          <Button className="btn-gradient btn-glow" onClick={()=>{
+            setFormData({ name: '', type: '', description: '', team_size: 5, timeline: '', required_skills: '' });
+            setOpen(true);
+          }}>Create New Project</Button>
         </div>
 
         <div className="mt-4 grid grid-cols-1 md:grid-cols-4 gap-2">
@@ -78,6 +133,21 @@ export default function ProjectsPage() {
           </div>
         </div>
       </div>
+
+      {/* LOADING */}
+      {loading && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {Array.from({length:6}).map((_,i)=>(
+            <div key={i} className="glass-card">
+              <div className="inner p-4 animate-pulse space-y-3">
+                <div className="h-5 bg-white/10 rounded" />
+                <div className="h-4 bg-white/10 rounded" />
+                <div className="h-24 bg-white/10 rounded" />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* GRID VIEW */}
       {view === 'grid' && (
@@ -94,18 +164,18 @@ export default function ProjectsPage() {
                   <div className="p-4">
                     <div className="flex items-start justify-between">
                       <div>
-                        <div className="font-semibold">{p.name}</div>
+                        <div className="font-semibold">{p.title}</div>
                         <div className="text-xs text-white/60">{p.type}</div>
                       </div>
                       <Ring value={p.progress} size={56} />
                     </div>
                     <p className="text-sm text-white/80 mt-2">{p.description}</p>
                     <div className="mt-3 flex items-center justify-between">
-                      <AvatarGroup people={users.slice(0,5)} />
+                      <AvatarGroup people={getAllUsers().slice(0,5)} />
                       <div className="flex gap-1">
                         <QuickAction>View</QuickAction>
                         <QuickAction>Edit</QuickAction>
-                        <QuickAction>Share</QuickAction>
+                        <QuickAction onClick={()=>{ setProjects(prev=>prev.filter(x=>x.id!==p.id)); staticStorage.deleteProjectAsync(p.id); }}>Delete</QuickAction>
                       </div>
                     </div>
                   </div>
@@ -133,7 +203,7 @@ export default function ProjectsPage() {
                   <div className="col-span-4 flex items-center gap-2">
                     <span className="h-6 w-6 rounded bg-gradient-to-r from-[#8B5CF6] to-[#06B6D4]" />
                     <div>
-                      <div className="text-sm font-medium">{p.name}</div>
+                      <div className="text-sm font-medium">{p.title}</div>
                       <div className="text-xs text-white/60">Updated recently</div>
                     </div>
                   </div>
@@ -142,12 +212,12 @@ export default function ProjectsPage() {
                     <Progress value={p.progress} />
                   </div>
                   <div className="col-span-2">
-                    <AvatarGroup people={users.slice(0,4)} />
+                    <AvatarGroup people={getAllUsers().slice(0,4)} />
                   </div>
                   <div className="col-span-2 flex justify-end gap-1">
                     <QuickAction>View</QuickAction>
                     <QuickAction>Edit</QuickAction>
-                    <QuickAction>Share</QuickAction>
+                    <QuickAction onClick={()=>{ setProjects(prev=>prev.filter(x=>x.id!==p.id)); staticStorage.deleteProjectAsync(p.id); }}>Delete</QuickAction>
                   </div>
                 </motion.div>
               ))}
@@ -156,8 +226,8 @@ export default function ProjectsPage() {
         </div>
       )}
 
-      {/* EMPTY/LOADING STATES (simple demo) */}
-      {filtered.length === 0 && (
+      {/* EMPTY STATE */}
+      {!loading && filtered.length === 0 && (
         <div className="text-center text-white/70 py-10">No results. Try adjusting filters.</div>
       )}
 
@@ -169,21 +239,59 @@ export default function ProjectsPage() {
         size="md"
         footer={[
           <Button key="cancel" variant="secondary" onClick={()=>setOpen(false)}>Cancel</Button>,
-          <Button key="create" className="btn-gradient" loading={creating} onClick={()=>{setCreating(true); setTimeout(()=>{setCreating(false); setOpen(false);}, 900);}}>Create</Button>,
+          <Button key="create" className="btn-gradient" loading={creating} onClick={handleCreateProject}>Create</Button>,
         ]}
       >
         <div className="space-y-5 text-white">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            <Input className="bg-[#0F0F23] border-white/15 text-white placeholder:text-white/50" label="Project Name" placeholder="e.g., Campus Events Hub" />
-            <Select className="bg-[#0F0F23] border-white/15 text-white" label="Type" options={["Web App","Mobile App","Platform","Assistant"].map(v=>({label:v,value:v}))} />
+            <Input 
+              className="bg-[#0F0F23] border-white/15 text-white placeholder:text-white/50" 
+              label="Project Name" 
+              placeholder="e.g., Campus Events Hub" 
+              value={formData.name}
+              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+            />
+            <Select 
+              className="bg-[#0F0F23] border-white/15 text-white" 
+              label="Type" 
+              options={["Web App","Mobile App","Platform","Assistant"].map(v=>({label:v,value:v}))}
+              value={formData.type}
+              onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value }))}
+            />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-            <Input className="bg-[#0F0F23] border-white/15 text-white" label="Team Size" type="number" min={2} max={10} defaultValue={5} />
-            <Input className="bg-[#0F0F23] border-white/15 text-white placeholder:text-white/50" label="Timeline" placeholder="MM/DD/YYYY - MM/DD/YYYY" />
-            <Input className="bg-[#0F0F23] border-white/15 text-white placeholder:text-white/50" label="Required Skills (comma separated)" placeholder="React, Node.js" />
+            <Input 
+              className="bg-[#0F0F23] border-white/15 text-white" 
+              label="Team Size" 
+              type="number" 
+              min={2} 
+              max={10} 
+              value={formData.team_size}
+              onChange={(e) => setFormData(prev => ({ ...prev, team_size: parseInt(e.target.value) }))}
+            />
+            <Input 
+              className="bg-[#0F0F23] border-white/15 text-white placeholder:text-white/50" 
+              label="Timeline" 
+              placeholder="MM/DD/YYYY - MM/DD/YYYY" 
+              value={formData.timeline}
+              onChange={(e) => setFormData(prev => ({ ...prev, timeline: e.target.value }))}
+            />
+            <Input 
+              className="bg-[#0F0F23] border-white/15 text-white placeholder:text-white/50" 
+              label="Required Skills (comma separated)" 
+              placeholder="React, Node.js" 
+              value={formData.required_skills}
+              onChange={(e) => setFormData(prev => ({ ...prev, required_skills: e.target.value }))}
+            />
           </div>
           <div>
-            <Input className="bg-[#0F0F23] border-white/15 text-white placeholder:text-white/50" label="Description" placeholder="Describe the scope and goals" />
+            <Input 
+              className="bg-[#0F0F23] border-white/15 text-white placeholder:text-white/50" 
+              label="Description" 
+              placeholder="Describe the scope and goals" 
+              value={formData.description}
+              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+            />
           </div>
         </div>
       </Modal>
@@ -191,9 +299,9 @@ export default function ProjectsPage() {
   );
 }
 
-function QuickAction({ children }) {
+function QuickAction({ children, ...props }) {
   return (
-    <button className="text-xs rounded-md px-2 py-1 bg-white/5 hover:bg-white/10 transition">{children}</button>
+    <button className="text-xs rounded-md px-2 py-1 bg-white/5 hover:bg-white/10 transition" {...props}>{children}</button>
   );
 }
 

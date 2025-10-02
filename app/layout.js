@@ -3,6 +3,7 @@ import "./globals.css";
 import Navigation from "@/src/components/Navigation";
 import RouteTransition from "@/src/components/RouteTransition";
 import Toaster from "@/src/components/ui/Toaster";
+import Footer from "@/src/components/Footer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -26,11 +27,12 @@ export default function RootLayout({ children }) {
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <Navigation />
-        <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
+        <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 pt-20">
           <RouteTransition>
             {children}
           </RouteTransition>
         </main>
+        <Footer />
         <Toaster />
       </body>
     </html>

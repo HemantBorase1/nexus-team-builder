@@ -8,19 +8,18 @@ import Button from "@/src/components/ui/Button";
 import Progress from "@/src/components/ui/Progress";
 import Badge from "@/src/components/ui/Badge";
 import Avatar from "@/src/components/ui/Avatar";
-import ImageUpload from "@/src/components/ui/ImageUpload";
-import uploadToCloudinary from "@/src/lib/cloudinary-upload";
-import { faculties, skillsCatalog } from "@/src/lib/mock-data";
-import toast from "react-hot-toast";
+import { getAllFaculties, getAllSkills } from "@/src/lib/mock-data";
+import staticStorage from "@/src/lib/static-storage";
 
 const steps = ["Personal", "Skills", "Availability", "Preferences"];
 
 export default function OnboardingPage() {
+  const faculties = getAllFaculties();
   const [step, setStep] = useState(0);
   const [dragging, setDragging] = useState(false);
   const [form, setForm] = useState({
     name: "",
-    faculty: faculties[0].id,
+    faculty: getAllFaculties()[0].id,
     avatar: "",
     skills: [],
     levels: {},
@@ -30,40 +29,46 @@ export default function OnboardingPage() {
     commitment: "Balanced",
   });
   const progress = ((step + 1) / steps.length) * 100;
-  const [saving, setSaving] = useState(false);
 
   const next = () => setStep((s) => Math.min(s + 1, steps.length - 1));
   const back = () => setStep((s) => Math.max(s - 1, 0));
-
-  const finish = async () => {
-    try {
-      setSaving(true);
-      // Session-free flow: persist locally and proceed. A later login can sync this.
-      const slots = [];
-      form.availability.forEach((day, d)=>{
-        let start = null;
-        day.forEach((val, h)=>{
-          if (val && start===null) start = h;
-          if ((!val || h===day.length-1) && start!==null){
-            const endIndex = val ? h+1 : h;
-            const fmt = (x)=>`${String(x).padStart(2,'0')}:00:00`;
-            slots.push({ day_of_week:d, start_time: fmt(start), end_time: fmt(endIndex) });
-            start=null;
-          }
-        });
+  
+  const finish = () => {
+    // Save user profile to static storage
+    const profile = {
+      name: form.name,
+      faculty: form.faculty,
+      avatar: form.avatar,
+      bio: "Passionate about building amazing projects!"
+    };
+    staticStorage.setUserProfile(profile);
+    
+    // Save skills
+    const skills = form.skills.map(skillId => ({
+      skill_id: skillId,
+      level: form.levels[skillId] || 3
+    }));
+    staticStorage.setUserSkills(skills);
+    
+    // Save availability
+    const availability = [];
+    form.availability.forEach((day, dayIdx) => {
+      day.forEach((slot, slotIdx) => {
+        if (slot) {
+          const startTime = slotIdx * 2;
+          const endTime = startTime + 2;
+          availability.push({
+            day_of_week: dayIdx,
+            start_time: `${startTime.toString().padStart(2, '0')}:00:00`,
+            end_time: `${endTime.toString().padStart(2, '0')}:00:00`
+          });
+        }
       });
-      const payload = { full_name: form.name, faculty: form.faculty, avatar_url: form.avatar, availability: slots, skills: form.skills, levels: form.levels };
-      try {
-        localStorage.setItem('onboardingProfile', JSON.stringify(payload));
-      } catch(_e) {}
-
-      toast.success('Onboarding completed');
-      window.location.href = '/dashboard';
-    } catch (e) {
-      toast.error(e.message);
-    } finally {
-      setSaving(false);
-    }
+    });
+    staticStorage.setUserAvailability(availability);
+    
+    // Redirect to dashboard
+    window.location.href = '/dashboard';
   };
 
   const onDrop = (e) => {
@@ -129,7 +134,6 @@ export default function OnboardingPage() {
       <Card>
         <CardHeader className="font-medium">Onboarding</CardHeader>
         <CardContent>
-          <AvatarDropDefinition />
           <AnimatePresence mode="wait" custom={step}>
             {step === 0 && (
               <motion.div
@@ -169,8 +173,21 @@ export default function OnboardingPage() {
                 </div>
 
                 <div className="md:col-span-2">
-                  <div className="text-sm text-white/70 mb-1">Avatar</div>
-                  <AvatarDrop onDone={(url)=> setForm({ ...form, avatar: url })} />
+                  <div
+                    onDragOver={(e)=>e.preventDefault()}
+                    onDrop={onDrop}
+                    className="rounded-xl border border-dashed border-white/20 bg-white/5 p-4 text-center hover:bg-white/10 transition"
+                  >
+                    <div className="text-sm font-medium">Upload Avatar</div>
+                    <div className="text-xs text-white/60">Drag & drop or click to select</div>
+                    <div className="mt-3 flex items-center justify-center gap-3">
+                      {form.avatar ? (
+                        <img src={form.avatar} alt="avatar" className="h-16 w-16 rounded-full object-cover" />
+                      ) : (
+                        <div className="h-16 w-16 rounded-full bg-white/10" />
+                      )}
+                    </div>
+                  </div>
                 </div>
               </motion.div>
             )}
@@ -190,7 +207,7 @@ export default function OnboardingPage() {
                   <Badge variant="secondary">{form.skills.length} selected</Badge>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {skillsCatalog.map((s) => {
+                  {getAllSkills().map((s) => {
                     const active = form.skills.includes(s.id);
                     return (
                       <motion.button
@@ -214,7 +231,7 @@ export default function OnboardingPage() {
                     {form.skills.map((id) => (
                       <motion.div key={id} whileHover={{ rotateX: 6, rotateY: -6 }} className="rounded-lg bg-white/5 p-3">
                         <div className="flex items-center justify-between mb-2">
-                          <div className="text-sm font-medium">{skillsCatalog.find((s) => s.id === id)?.name}</div>
+                          <div className="text-sm font-medium">{getAllSkills().find((s) => s.id === id)?.name}</div>
                           <span className="text-xs text-white/70">Lvl {form.levels[id] || 3}</span>
                         </div>
                         <input
@@ -315,74 +332,11 @@ export default function OnboardingPage() {
         </CardContent>
         <CardFooter className="flex justify-between">
           <Button variant="ghost" onClick={back} disabled={step === 0}>Back</Button>
-          <Button onClick={step === steps.length - 1 ? finish : next} loading={saving}>
+          <Button onClick={step === steps.length - 1 ? finish : next}>
             {step === steps.length - 1 ? 'Finish' : 'Next'}
           </Button>
         </CardFooter>
       </Card>
-    </div>
-  );
-}
-
-function AvatarDropDefinition() { return null; }
-
-function AvatarDrop({ onDone }) {
-  const [hover, setHover] = useState(false);
-  const [preview, setPreview] = useState(null);
-  const [error, setError] = useState("");
-  const [progress, setProgress] = useState(0);
-  const [success, setSuccess] = useState(false);
-  const inputRef = useRef(null);
-
-  const onSelect = async (file) => {
-    if (!file) return;
-    if (!file.type.startsWith('image/')) { setError('Invalid file type'); return; }
-    if (file.size > 5*1024*1024) { setError('File too large (max 5MB)'); return; }
-    setError(""); setSuccess(false);
-    setPreview(URL.createObjectURL(file));
-    try {
-      const res = await uploadToCloudinary(file, { onProgress: setProgress, folder: 'nexus/avatars' });
-      onDone && onDone(res.secure_url);
-      setSuccess(true);
-    } catch (e) {
-      setError(e.message);
-      setProgress(0);
-    }
-  };
-
-  return (
-    <div
-      onDragOver={(e)=>{e.preventDefault(); setHover(true);}}
-      onDragLeave={()=>setHover(false)}
-      onDrop={(e)=>{e.preventDefault(); setHover(false); onSelect(e.dataTransfer.files?.[0]);}}
-      className={`mx-auto h-[200px] w-[200px] rounded-full border ${hover? 'border-[rgba(139,92,246,0.7)]' : 'border-[rgba(139,92,246,0.3)]'} bg-[#1A1A2E] grid place-items-center relative overflow-hidden`}
-    >
-      {!preview ? (
-        <button type="button" className="text-center text-white/80" onClick={()=>inputRef.current?.click()}>
-          <div className="text-3xl">👤</div>
-          <div className="text-xs">Upload Photo</div>
-        </button>
-      ) : (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={preview} alt="preview" className="h-full w-full object-cover" />
-      )}
-      <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(e)=>onSelect(e.target.files?.[0])} />
-      {preview && (
-        <div className="absolute inset-0 bg-black/20 opacity-0 hover:opacity-100 transition grid place-items-center">
-          <button type="button" className="rounded-md bg-white/10 px-3 py-1 text-sm" onClick={()=>inputRef.current?.click()}>Change</button>
-        </div>
-      )}
-      {progress > 0 && progress < 100 && (
-        <div className="absolute bottom-2 left-2 right-2 h-2 rounded bg-white/10 overflow-hidden">
-          <div className="h-full bg-gradient-to-r from-[#8B5CF6] to-[#06B6D4]" style={{ width: `${progress}%` }} />
-        </div>
-      )}
-      {success && <div className="absolute bottom-2 text-emerald-400 text-xs">✓ Uploaded</div>}
-      {error && (
-        <div className="mt-2 text-xs text-red-400 text-center">
-          {error} <button className="underline" onClick={()=>{ setError(""); setPreview(null); setProgress(0); }}>Retry</button>
-        </div>
-      )}
     </div>
   );
 }

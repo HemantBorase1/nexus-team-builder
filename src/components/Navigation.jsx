@@ -12,7 +12,6 @@ const navLinks = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/matching", label: "Matching" },
   { href: "/projects", label: "Projects" },
-  { href: "/profile", label: "Profile" },
 ];
 
 export default function Navigation() {
@@ -24,13 +23,13 @@ export default function Navigation() {
   const [session, setSession] = useState(null);
 
   useEffect(()=>{
-    (async()=>{
-      try{
-        const res = await fetch('/api/auth/session');
-        const j = await res.json();
-        if (res.ok) setSession(j.data);
-      }catch(_e){}
-    })();
+    // Set static session for demo
+    setSession({
+      user: {
+        email: 'alex.johnson@student.unsw.edu.au',
+        id: 'user-1'
+      }
+    });
   },[]);
 
   useEffect(() => {
@@ -111,7 +110,7 @@ export default function Navigation() {
                       >
                         <Link href="/profile" className="block rounded-md px-3 py-2 text-sm text-white/90 hover:bg-white/5" onClick={()=>setDropdownOpen(false)} role="menuitem">Profile</Link>
                         <Link href="/dashboard" className="block rounded-md px-3 py-2 text-sm text-white/90 hover:bg-white/5" onClick={()=>setDropdownOpen(false)} role="menuitem">Dashboard</Link>
-                        <button className="w-full text-left rounded-md px-3 py-2 text-sm text-white/90 hover:bg-white/5" role="menuitem" onClick={async()=>{await fetch('/api/auth/logout',{method:'POST'}); location.href='/auth/login';}}>Sign out</button>
+                        <button className="w-full text-left rounded-md px-3 py-2 text-sm text-white/90 hover:bg-white/5" role="menuitem" onClick={()=>{location.href='/auth/login';}}>Sign out</button>
                       </motion.div>
                     )}
                   </AnimatePresence>

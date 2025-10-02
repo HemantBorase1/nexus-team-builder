@@ -7,7 +7,7 @@ import Avatar from "@/src/components/ui/Avatar";
 import Badge from "@/src/components/ui/Badge";
 import Progress from "@/src/components/ui/Progress";
 import TeamCircle from "@/src/components/team/TeamCircle";
-import { users, sampleProjects, skillsCatalog, getFacultyMeta } from "@/src/lib/mock-data";
+import { getAllUsers, getAllProjects, getAllSkills, getFacultyMeta } from "@/src/lib/mock-data";
 
 function CompatibilityRing({ value = 72 }) {
   const radius = 36;
@@ -42,11 +42,11 @@ function CompatibilityRing({ value = 72 }) {
 }
 
 export default function MatchingPage() {
-  const candidates = users.slice(0, 20);
+  const candidates = getAllUsers().slice(0, 20);
   const [index, setIndex] = useState(0);
   const [team, setTeam] = useState([]);
   const [projectOpen, setProjectOpen] = useState(false);
-  const [project, setProject] = useState(sampleProjects[0]);
+  const [project, setProject] = useState(getAllProjects()[0]);
   const current = candidates[index];
 
   const x = useMotionValue(0);
@@ -99,7 +99,7 @@ export default function MatchingPage() {
               <AnimatePresence>
                 {projectOpen && (
                   <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="mt-2 overflow-hidden rounded-md border border-white/10">
-                    {sampleProjects.map((p)=> (
+                    {getAllProjects().map((p)=> (
                       <button key={p.id} onClick={()=>{setProject(p); setProjectOpen(false);}} className={`block w-full text-left px-3 py-2 text-sm hover:bg-white/5 ${p.id===project.id?'bg-white/5':''}`}>{p.name}</button>
                     ))}
                   </motion.div>

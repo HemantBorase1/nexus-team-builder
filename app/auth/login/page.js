@@ -5,7 +5,8 @@ import { Card, CardHeader, CardContent } from "@/src/components/ui/Card";
 import Input from "@/src/components/ui/Input";
 import Button from "@/src/components/ui/Button";
 import Avatar from "@/src/components/ui/Avatar";
-import toast from "react-hot-toast";
+import { toast } from "react-hot-toast";
+import authService from "@/src/services/auth-service";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -18,11 +19,15 @@ export default function LoginPage() {
     if (!email || !password) return setError("Email and password required");
     setError("");
     try {
-      const res = await fetch('/api/auth/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, password }) });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error?.description || 'Login failed');
+      const res = await authService.login({ email, password });
+      if (!res.ok) throw new Error(res.error?.description || 'Login failed');
       toast.success('Welcome back');
-      window.location.href = "/dashboard";
+      // Demo: redirect to profile page when demo account logs in
+      if (email.toLowerCase() === 'demo@nexus.app') {
+        window.location.href = "/profile";
+      } else {
+        window.location.href = "/dashboard";
+      }
     } catch (err) {
       setError(err.message);
       toast.error(err.message);

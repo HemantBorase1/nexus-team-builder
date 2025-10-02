@@ -8,7 +8,8 @@ import Avatar from "@/src/components/ui/Avatar";
 import Badge from "@/src/components/ui/Badge";
 import Progress from "@/src/components/ui/Progress";
 import Skeleton from "@/src/components/ui/Skeleton";
-import { users, skillsCatalog } from "@/src/lib/mock-data";
+import { getCurrentUser, getAllSkills, getAllFaculties } from "@/src/lib/mock-data";
+import staticStorage from "@/src/lib/static-storage";
 import toast from "react-hot-toast";
 
 function CountUp({ to = 0, duration = 1000, className = "" }) {
@@ -35,7 +36,7 @@ const categoryColor = (cat) => {
 };
 
 export default function ProfilePage() {
-  const me = users[0];
+  const me = getCurrentUser();
   const [loading, setLoading] = useState(false);
   const [edit, setEdit] = useState(false);
   const [bio, setBio] = useState("Passionate builder who loves shipping delightful products.");
@@ -97,7 +98,7 @@ export default function ProfilePage() {
             <CardContent>
               <div className="flex flex-wrap gap-2">
                 {skills.map((s, idx) => {
-                  const meta = skillsCatalog.find((x)=>x.id===s.id);
+                  const meta = getAllSkills().find((x)=>x.id===s.id);
                   return (
                     <motion.div key={s.id+idx} whileHover={{ scale: 1.06 }} className={`rounded-full px-3 py-1 text-sm text-white bg-gradient-to-r ${categoryColor(meta?.category)} shadow`}> 
                       {meta?.icon || '•'} {s.name}

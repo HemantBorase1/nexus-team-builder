@@ -5,10 +5,12 @@ import { Card, CardHeader, CardContent } from "@/src/components/ui/Card";
 import Input from "@/src/components/ui/Input";
 import Button from "@/src/components/ui/Button";
 import Select from "@/src/components/ui/Select";
-import { faculties } from "@/src/lib/mock-data";
-import toast from "react-hot-toast";
+import { getAllFaculties } from "@/src/lib/mock-data";
+import { toast } from "react-hot-toast";
+import authService from "@/src/services/auth-service";
 
 export default function SignupPage() {
+  const faculties = getAllFaculties();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -22,10 +24,10 @@ export default function SignupPage() {
     if (password !== confirm) return setError("Passwords do not match");
     setError("");
     try {
-      const res = await fetch('/api/auth/signup', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, password, full_name: name, faculty, year: 1 }) });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error?.description || 'Signup failed');
+      const res = await authService.signup({ name, email, password, faculty });
+      if (!res.ok) throw new Error(res.error?.description || 'Signup failed');
       toast.success('Account created');
+      // Auto-login simulated by signup; redirect to onboarding
       window.location.href = "/onboarding";
     } catch (err) {
       setError(err.message);

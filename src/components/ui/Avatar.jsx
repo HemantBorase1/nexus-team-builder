@@ -2,9 +2,7 @@
 
 import { useState } from "react";
 
-const sizeMap = { sm: 28, md: 40, lg: 56, xl: 80 };
-
-export default function Avatar({ src, name = "?", size = 40, status = "online", facultyColor = ["#8B5CF6", "#06B6D4"], className = "", loading = "lazy" }) {
+export default function Avatar({ src, name = "?", size = 40, status = "online", facultyColor = ["#8B5CF6", "#06B6D4"], className = "" }) {
   const [error, setError] = useState(false);
   const initials = (name || "?")
     .split(" ")
@@ -13,14 +11,13 @@ export default function Avatar({ src, name = "?", size = 40, status = "online", 
     .join("")
     .toUpperCase();
   const gradient = `conic-gradient(from 180deg at 50% 50%, ${facultyColor[0]}, ${facultyColor[1]})`;
-  const pixelSize = typeof size === 'string' ? (sizeMap[size] || 40) : size;
   return (
-    <div className={`relative inline-block ${className}`} style={{ width: pixelSize, height: pixelSize }}>
+    <div className={`relative inline-block ${className}`} style={{ width: size, height: size }}>
       <div className="rounded-full p-[2px]" style={{ background: gradient }}>
-        <div className="rounded-full overflow-hidden bg-gradient-to-br from-[#0F0F23] to-[#111127] grid place-items-center hover:scale-[1.03] transition-transform" style={{ width: pixelSize - 4, height: pixelSize - 4 }}>
+        <div className="rounded-full overflow-hidden bg-gradient-to-br from-[#0F0F23] to-[#111127] grid place-items-center hover:scale-[1.03] transition-transform" style={{ width: size - 4, height: size - 4 }}>
           {!error && src ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={src} alt={name} loading={loading} onError={() => setError(true)} className="w-full h-full object-cover" />
+            <img src={src} alt={name} onError={() => setError(true)} className="w-full h-full object-cover" />
           ) : (
             <span className="text-xs font-semibold bg-gradient-to-r from-[#8B5CF6] to-[#06B6D4] bg-clip-text text-transparent">
               {initials}

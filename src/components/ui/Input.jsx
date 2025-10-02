@@ -33,7 +33,7 @@ export default function Input({
 
   return (
     <div className={cx("w-full", className)}>
-      <div className={cx("relative rounded-md border bg-[#1A1A2E] text-white", baseBorder, focusRing)}>
+      <div className={cx("relative rounded-lg border bg-[#1A1A2E] text-white transition-all duration-300", baseBorder, focusRing)}>
         {leftIcon && (
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/70 text-sm">{leftIcon}</span>
         )}
@@ -71,7 +71,7 @@ export default function Input({
         <span
           aria-hidden
           className={cx(
-            "pointer-events-none absolute inset-0 rounded-md",
+            "pointer-events-none absolute inset-0 rounded-lg",
             focused && !error && !success && "ring-1 ring-inset ring-[#8B5CF6]"
           )}
         />
